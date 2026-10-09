@@ -92,18 +92,44 @@ export const TopBar: React.FC<TopBarProps> = ({
           </span>
         </div>
 
-        {/* Execution Mode */}
-        <div
-          className={`px-2 py-1 rounded font-mono font-semibold flex items-center space-x-1 cursor-pointer transition shrink-0 ${
-            isLive
-              ? 'bg-[#ff3b69]/20 text-[#ff3b69] border border-[#ff3b69]/50 animate-pulse'
-              : 'bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/30'
-          }`}
-          onClick={isLive ? () => onControl('set_mode', 'paper') : onOpenLiveModal}
-          title="Klicken zum Umschalten zwischen PAPER und LIVE"
-        >
-          {isLive ? <Zap className="w-3 h-3" /> : null}
-          <span>{isLive ? '⚡ LIVE' : snapshot?.mode === 'dry_run' ? 'DRY-RUN' : 'PAPER'}</span>
+        {/* Dedicated Paper / Live Mode Switcher */}
+        <div className="flex items-center bg-[#081113] border border-[#132427] rounded-lg p-0.5 shrink-0 shadow-sm">
+          <button
+            type="button"
+            onClick={() => onControl('set_mode', 'paper')}
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold transition ${
+              !isLive
+                ? 'bg-[#00e5ff]/20 text-[#00e5ff] border border-[#00e5ff]/40 shadow-sm'
+                : 'text-[#7e9994] hover:text-[#ecf9f6]'
+            }`}
+            title="Paper-Trading Modus (Simulation / Risikofrei)"
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${!isLive ? 'bg-[#00e5ff]' : 'bg-[#7e9994]'}`} />
+            <span>PAPER</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (isLive) return;
+              if (!snapshot?.live_signer?.ready) {
+                onOpenLiveModal();
+              } else {
+                if (window.confirm('LIVE-TRADING AKTIVIEREN? Es werden echte Solana On-Chain Transaktionen mit Ihrem Signer ausgeführt.')) {
+                  onControl('set_mode', 'live');
+                }
+              }
+            }}
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold transition ${
+              isLive
+                ? 'bg-[#ff3b69]/25 text-[#ff3b69] border border-[#ff3b69]/60 shadow-[0_0_12px_rgba(255,59,105,0.35)] animate-pulse'
+                : 'text-[#7e9994] hover:text-[#ecf9f6]'
+            }`}
+            title="Live-Trading Modus (Echte Solana Transaktionen)"
+          >
+            <Zap className={`w-3 h-3 ${isLive ? 'text-[#ff3b69]' : 'text-[#7e9994]'}`} />
+            <span>⚡ LIVE</span>
+          </button>
         </div>
 
         {/* Armed status */}

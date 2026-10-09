@@ -22,6 +22,8 @@ interface DashboardViewProps {
   onInspectCoin: (coin: Coin) => void;
   onSellPosition: (positionId: string) => void;
   onNavigateTab: (tab: any) => void;
+  onSwitchMode?: (mode: 'paper' | 'live') => void;
+  onOpenLiveModal?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -29,15 +31,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onTradeCoin,
   onInspectCoin,
   onSellPosition,
-  onNavigateTab
+  onNavigateTab,
+  onSwitchMode,
+  onOpenLiveModal
 }) => {
+  const isLive = snapshot?.mode === 'live';
+  const [equityViewMode, setEquityViewMode] = useState<'paper' | 'wallet'>(isLive ? 'wallet' : 'paper');
+
+  // Auto sync when engine mode changes
+  React.useEffect(() => {
+    setEquityViewMode(isLive ? 'wallet' : 'paper');
+  }, [isLive]);
+
   const stats = snapshot?.stats;
-  const equitySol = stats?.equity_sol ?? 10;
+  const paperEquitySol = stats?.equity_sol ?? 10;
+  const walletBalanceSol = snapshot?.live_signer?.balance_sol ?? 0;
+  const rawPositions = Array.isArray(snapshot?.positions) ? snapshot.positions : [];
+  const openPositions = rawPositions.filter(p => p && p.status === 'OPEN');
+  const openPositionsValSol = openPositions.reduce((acc, p) => acc + (p.current_value_sol || 0), 0);
+  const liveWalletEquitySol = walletBalanceSol + openPositionsValSol;
+
+  const displayedEquitySol = equityViewMode === 'wallet' ? liveWalletEquitySol : paperEquitySol;
   const realizedSol = stats?.realized_sol ?? 0;
   const unrealizedSol = stats?.unrealized_sol ?? 0;
   const winRate = stats?.win_rate_pct ?? (stats && stats.trades > 0 ? (stats.wins / stats.trades) * 100 : 0);
-  const rawPositions = Array.isArray(snapshot?.positions) ? snapshot.positions : [];
-  const openPositions = rawPositions.filter(p => p && p.status === 'OPEN');
   const rawCandidates = Array.isArray(snapshot?.candidates)
     ? snapshot.candidates
     : Array.isArray(snapshot?.coins)
@@ -64,8 +81,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const filteredHistory = cutoff > 0 ? rawHistory.filter(h => h.ts_ms >= cutoff) : rawHistory;
   const history = filteredHistory.length > 1 ? filteredHistory : rawHistory;
 
-  const minEquity = history.length ? Math.min(...history.map(h => h.equity_sol)) : (equitySol * 0.95);
-  const maxEquity = history.length ? Math.max(...history.map(h => h.equity_sol)) : (equitySol * 1.05);
+  const minEquity = history.length ? Math.min(...history.map(h => h.equity_sol)) : (displayedEquitySol * 0.95);
+  const maxEquity = history.length ? Math.max(...history.map(h => h.equity_sol)) : (displayedEquitySol * 1.05);
   const midEquity = (maxEquity + minEquity) / 2;
   const equityRange = maxEquity - minEquity || 0.001;
 
@@ -104,7 +121,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div>
             <div className="font-extrabold text-sm text-[#ecf9f6] flex items-center space-x-2">
               <span>HELIX 5.5 QUANT TERMINAL</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#00ffa3]/15 text-[#00ffa3]">
+              <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
+                isLive
+                  ? 'bg-[#ff3b69]/20 text-[#ff3b69] border border-[#ff3b69]/40'
+                  : 'bg-[#00ffa3]/15 text-[#00ffa3] border border-[#00ffa3]/30'
+              }`}>
                 {snapshot?.mode?.toUpperCase() || 'PAPER'}
               </span>
             </div>
@@ -115,6 +136,38 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+          {/* Dashboard Mode Switcher */}
+          {onSwitchMode && (
+            <div className="flex items-center bg-[#050b0d] border border-[#132427] rounded-lg p-0.5 shadow-sm">
+              <button
+                type="button"
+                onClick={() => onSwitchMode('paper')}
+                className={`px-2.5 py-1 rounded text-[11px] font-mono font-bold transition flex items-center space-x-1 ${
+                  !isLive
+                    ? 'bg-[#00e5ff]/20 text-[#00e5ff] border border-[#00e5ff]/40 shadow-sm'
+                    : 'text-[#7e9994] hover:text-[#ecf9f6]'
+                }`}
+                title="Paper-Modus aktivieren"
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${!isLive ? 'bg-[#00e5ff]' : 'bg-[#7e9994]'}`} />
+                <span>PAPER</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onSwitchMode('live')}
+                className={`px-2.5 py-1 rounded text-[11px] font-mono font-bold transition flex items-center space-x-1 ${
+                  isLive
+                    ? 'bg-[#ff3b69]/25 text-[#ff3b69] border border-[#ff3b69]/60 animate-pulse shadow-sm'
+                    : 'text-[#7e9994] hover:text-[#ecf9f6]'
+                }`}
+                title="Live-Modus aktivieren"
+              >
+                <Zap className="w-3 h-3 text-[#ff3b69]" />
+                <span>LIVE</span>
+              </button>
+            </div>
+          )}
+
           <div className={`px-2.5 py-1 rounded border text-[11px] font-bold flex items-center space-x-1.5 ${
             tradable ? 'bg-[#00ffa3]/15 text-[#00ffa3] border-[#00ffa3]/30' : 'bg-[#ff3b69]/20 text-[#ff3b69] border-[#ff3b69]/40'
           }`}>
@@ -141,16 +194,54 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Top Quant Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-        <div className="p-4 rounded-xl bg-[#081113] border border-[#132427] relative overflow-hidden">
-          <div className="text-[10px] uppercase text-[#7e9994] font-medium flex items-center justify-between">
-            <span>Portfolio Equity</span>
-            <DollarSign className="w-4 h-4 text-[#00ffa3]" />
+        {/* Dynamic Portfolio Equity Card (Paper / Wallet Switchable) */}
+        <div className="p-4 rounded-xl bg-[#081113] border border-[#132427] relative overflow-hidden flex flex-col justify-between">
+          <div>
+            <div className="text-[10px] uppercase text-[#7e9994] font-medium flex items-center justify-between">
+              <span className="flex items-center space-x-1.5">
+                <span>{equityViewMode === 'wallet' ? 'Wallet Equity' : 'Paper Equity'}</span>
+                <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${
+                  equityViewMode === 'wallet'
+                    ? 'bg-[#ff3b69]/20 text-[#ff3b69] border border-[#ff3b69]/40'
+                    : 'bg-[#00e5ff]/20 text-[#00e5ff] border border-[#00e5ff]/40'
+                }`}>
+                  {equityViewMode === 'wallet' ? 'LIVE' : 'PAPER'}
+                </span>
+              </span>
+              <div className="flex bg-[#050b0d] p-0.5 rounded border border-[#132427]">
+                <button
+                  type="button"
+                  onClick={() => setEquityViewMode('paper')}
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition ${
+                    equityViewMode === 'paper' ? 'bg-[#00e5ff]/25 text-[#00e5ff]' : 'text-[#7e9994] hover:text-[#ecf9f6]'
+                  }`}
+                  title="Paper Simulation Equity anzeigen"
+                >
+                  PAPER
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEquityViewMode('wallet')}
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition ${
+                    equityViewMode === 'wallet' ? 'bg-[#ff3b69]/25 text-[#ff3b69]' : 'text-[#7e9994] hover:text-[#ecf9f6]'
+                  }`}
+                  title="On-Chain Signer Wallet Equity anzeigen"
+                >
+                  WALLET
+                </button>
+              </div>
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-[#ecf9f6] mt-1.5">
+              {displayedEquitySol.toFixed(4)} <span className="text-xs text-[#00ffa3]">SOL</span>
+            </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-[#ecf9f6] mt-1">
-            {equitySol.toFixed(4)} <span className="text-xs text-[#00ffa3]">SOL</span>
-          </div>
-          <div className="text-[11px] text-[#7e9994] mt-0.5">
-            ≈ ${(equitySol * 150).toFixed(2)} USD
+          <div className="text-[11px] text-[#7e9994] mt-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 pt-1 border-t border-[#132427]/60">
+            <span>≈ ${(displayedEquitySol * 150).toFixed(2)} USD</span>
+            <span className="text-[10px] text-[#7e9994] truncate">
+              {equityViewMode === 'wallet'
+                ? `Bal: ${walletBalanceSol.toFixed(3)} + Pos: ${openPositionsValSol.toFixed(3)}`
+                : `Start: ${(snapshot?.config?.starting_sol ?? 10).toFixed(2)} SOL`}
+            </span>
           </div>
         </div>
 

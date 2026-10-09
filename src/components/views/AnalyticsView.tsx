@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AnalysisSnapshot } from '../../types/helix';
 import { helixApi } from '../../services/api';
 import { BarChart3, Download, TrendingUp, Layers, PieChart, Loader2, Clock } from 'lucide-react';
+import { StrategyCorrelationMatrix } from '../analytics/StrategyCorrelationMatrix';
 
 export const AnalyticsView: React.FC = () => {
   const [data, setData] = useState<AnalysisSnapshot | null>(null);
@@ -427,6 +428,9 @@ export const AnalyticsView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* D3-based Strategy Correlation Matrix */}
+      <StrategyCorrelationMatrix data={data} timeframe={timeframe} />
 
       {/* Routes & Exit Distribution Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

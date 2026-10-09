@@ -166,6 +166,20 @@ export default function App() {
     }
   };
 
+  const handleSwitchMode = async (targetMode: 'paper' | 'live') => {
+    if (targetMode === 'live') {
+      if (!snapshot?.live_signer?.ready) {
+        setShowLiveModal(true);
+        return;
+      }
+      if (window.confirm('LIVE-TRADING AKTIVIEREN? Es werden echte Solana On-Chain Transaktionen mit Ihrem Signer ausgeführt.')) {
+        await handleControl('set_mode', 'live');
+      }
+    } else {
+      await handleControl('set_mode', 'paper');
+    }
+  };
+
   const handleTradeCoin = (coin: Coin) => {
     setSelectedCoin(coin);
     setShowTradeModal(true);
@@ -306,6 +320,8 @@ export default function App() {
                       onInspectCoin={handleInspectCoin}
                       onSellPosition={handleSellPosition}
                       onNavigateTab={handleSelectTab}
+                      onSwitchMode={handleSwitchMode}
+                      onOpenLiveModal={() => setShowLiveModal(true)}
                     />
                   )}
                   {currentTab === 'scanner' && (
