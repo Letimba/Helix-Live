@@ -1,0 +1,6 @@
+{
+  "name": "HELIX 5.5 — Multi-Strategy Solana Trading Terminal",
+  "description": "Multi-strategy Solana trading terminal with regime detection, Raydium-preferred execution, PumpPortal fallback, manual position control, persistent trade journal and visual performance analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
