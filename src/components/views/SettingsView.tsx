@@ -27,6 +27,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const [pollSecs, setPollSecs] = useState<number>(cfg?.poll_seconds ?? 1.5);
   const [startingSol, setStartingSol] = useState<number>(cfg?.starting_sol ?? 10.0);
+  const [slippage, setSlippage] = useState<number>(cfg?.execution?.max_slippage_pct ?? 1.0);
   const [saving, setSaving] = useState(false);
   const [privateKeyInput, setPrivateKeyInput] = useState('');
   const [savingKey, setSavingKey] = useState(false);
@@ -49,8 +50,39 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     try {
       await onUpdateConfig({
         poll_seconds: pollSecs,
-        starting_sol: startingSol
+        starting_sol: startingSol,
+        execution: {
+          mode: cfg?.execution?.mode || 'paper',
+          live_armed: Boolean(cfg?.execution?.live_armed),
+          active_route: cfg?.execution?.active_route || 'auto',
+          solana_rpc_url: cfg?.execution?.solana_rpc_url || 'https://api.mainnet-beta.solana.com',
+          jito_block_engine_url: cfg?.execution?.jito_block_engine_url || '',
+          jito_tip_sol: cfg?.execution?.jito_tip_sol || 0.001,
+          priority_fee_micro_lamports: cfg?.execution?.priority_fee_micro_lamports || 100000,
+          priority_fee_sol: cfg?.execution?.priority_fee_sol || 0.0005,
+          pumpportal_local_url: cfg?.execution?.pumpportal_local_url || '',
+          bnb_rpc_url: cfg?.execution?.bnb_rpc_url || '',
+          pancakeswap_router_address: cfg?.execution?.pancakeswap_router_address || '',
+          raydium_trade_api_url: cfg?.execution?.raydium_trade_api_url || '',
+          route_mode: cfg?.execution?.route_mode || 'auto',
+          paper_raydium_fee_pct: cfg?.execution?.paper_raydium_fee_pct || 0.25,
+          max_slippage_pct: slippage,
+          simulate_before_submit: cfg?.execution?.simulate_before_submit ?? true
+        },
+        risk_limits: {
+          max_daily_loss_sol: cfg?.risk_limits?.max_daily_loss_sol ?? 10.0,
+          max_position_size_sol: cfg?.risk_limits?.max_position_size_sol ?? 1.0,
+          max_portfolio_risk_pct: cfg?.risk_limits?.max_portfolio_risk_pct ?? 80.0,
+          max_open_positions: cfg?.risk_limits?.max_open_positions ?? 15,
+          max_slippage_pct: slippage,
+          max_consecutive_losses: cfg?.risk_limits?.max_consecutive_losses ?? 15,
+          max_token_risk_score: cfg?.risk_limits?.max_token_risk_score ?? 65.0,
+          max_liquidity_drop_pct: cfg?.risk_limits?.max_liquidity_drop_pct ?? 30.0,
+          max_rpc_latency_ms: cfg?.risk_limits?.max_rpc_latency_ms ?? 800.0,
+          max_execution_latency_ms: cfg?.risk_limits?.max_execution_latency_ms ?? 2500.0
+        }
       });
+      playTradeSound('buy');
     } finally {
       setSaving(false);
     }
@@ -227,7 +259,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="text-[10px] text-[#7e9994] block mb-1">
                 Marktdaten Polling-Intervall ({pollSecs}s)
@@ -239,6 +271,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 step="0.5"
                 value={pollSecs}
                 onChange={e => setPollSecs(parseFloat(e.target.value))}
+                className="w-full accent-[#00ffa3] h-1.5 bg-[#081113] rounded cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] text-[#7e9994] block mb-1">
+                Slippage-Toleranz ({slippage.toFixed(1)}%)
+              </label>
+              <input
+                type="range"
+                min="0.1"
+                max="5.0"
+                step="0.1"
+                value={slippage}
+                onChange={e => setSlippage(parseFloat(e.target.value))}
                 className="w-full accent-[#00ffa3] h-1.5 bg-[#081113] rounded cursor-pointer"
               />
             </div>
